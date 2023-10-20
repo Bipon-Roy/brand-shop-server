@@ -61,6 +61,8 @@ async function run() {
                     shortDesc: fetchProduct.shortDesc,
                     ratings: fetchProduct.ratings,
                     photo: fetchProduct.photo,
+                    keyFeature: fetchProduct.keyFeature,
+                    desc: fetchProduct.desc,
                 },
             };
 

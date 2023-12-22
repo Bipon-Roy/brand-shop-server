@@ -20,6 +20,22 @@ const client = new MongoClient(uri, {
     },
 });
 
+// middlewares
+
+const verifyToken = (req, res, next) => {
+    if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" });
+    }
+    const token = req.headers.authorization.split(" ")[1];
+    jwt.verify(token, process.env.Access_Token_Secret, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.decoded = decoded;
+        next();
+    });
+};
+
 async function run() {
     try {
         const productsCollection = client.db("shopDb").collection("products");
@@ -27,26 +43,11 @@ async function run() {
         const cartCollection = client.db("shopDb").collection("cart");
 
         //jwt related api
-        //jwt related api
         app.post("/jwt", async (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.Access_Token_Secret, { expiresIn: "1h" });
             res.send({ token });
         });
-        // middlewares
-        const verifyToken = (req, res, next) => {
-            if (!req.headers.authorization) {
-                return res.status(401).send({ message: "unauthorized access" });
-            }
-            const token = req.headers.authorization.split(" ")[1];
-            jwt.verify(token, process.env.Access_Token_Secret, (err, decoded) => {
-                if (err) {
-                    return res.status(401).send({ message: "unauthorized access" });
-                }
-                req.decoded = decoded;
-                next();
-            });
-        };
 
         //products related api
         app.get("/products", async (req, res) => {
@@ -108,13 +109,16 @@ async function run() {
 
         //For Cart
         app.get("/cart", verifyToken, async (req, res) => {
-            const cursor = cartCollection.find();
-            const users = await cursor.toArray();
-            res.send(users);
+            const userEmail = req.query.email;
+            let filter = {};
+            if (userEmail) {
+                filter.userEmail = userEmail;
+            }
+            const result = await cartCollection.find(filter).toArray();
+            res.send(result);
         });
         app.post("/cart", verifyToken, async (req, res) => {
             const user = req.body;
-            console.log(user);
             const result = await cartCollection.insertOne(user);
             res.send(result);
         });
